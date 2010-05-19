@@ -7,7 +7,7 @@ use Carp 'confess';
 use DBI;
 use Digest::MD5 'md5_hex';
 
-our $VERSION = '0.002';
+our $VERSION = '0.003';
 
 our %contexts = ( );
 
@@ -23,7 +23,6 @@ sub set_db
 		AutoCommit => 0,
 		PrintError => 0,
 		Taint      => 1,
-#		RootClass  => "DBIx::ContextualFetch"
   };
   map { $attrs->{$_} = $default_attrs->{$_} unless defined($attrs->{$_}) }
     keys %$default_attrs;

@@ -42,8 +42,6 @@ use strict;
 use warnings 'all';
 use Test::More 'no_plan';
 
-use_ok('Ima::DBI::Lite');
-
 ok(
   my $w = My::Woot->new(),
   "Got a woot"
