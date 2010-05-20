@@ -7,13 +7,15 @@ use Carp 'confess';
 use DBI;
 use Digest::MD5 'md5_hex';
 
-our $VERSION = '0.003';
+our $VERSION = '0.004';
 
-our %contexts = ( );
 
+my %contexts = ( );
+  
 sub set_db
 {
   my ($pkg)           = shift;
+  $pkg                = ref($pkg) ? ref($pkg) : $pkg;
   my ($name)          = shift;
   my @dsn_with_attrs  = @_;
   my @dsn             = grep { ! ref($_) } @_;
@@ -28,40 +30,68 @@ sub set_db
     keys %$default_attrs;
   
   @dsn_with_attrs = ( @dsn, $attrs );
-  
-  $contexts{$name}->{ $pkg->dbi_context( @dsn ) } = {
-    dsn_with_attrs  => [ @dsn_with_attrs ],
-    dbh             => undef,
-  };
-  
+
   no strict 'refs';
   no warnings 'redefine';
-  *{"$pkg\::dbi_dsn"} = sub { @dsn };
-  *{"$pkg\::dbi_dsn_full"} = sub { @dsn_with_attrs };
-  *{"$pkg\::db_$name"} = sub {
+  *{"$pkg\::__dsn"} = sub { @dsn_with_attrs };
+  *{"$pkg\::db_$name"} = $pkg->_mk_closure( @dsn_with_attrs );
+  return;
+
+}# end set_db()
+
+
+sub _mk_closure
+{
+  my ($pkg, @dsn_with_attrs) = @_;
+  
+  return sub {
     my ($class) = @_;
-    my $key = $pkg->dbi_context( $class->dbi_dsn );
-    my $context = $contexts{$name}->{$key} || { };
-    my $dbh = $context->{dbh};
-    if( $dbh && $class->dbi_ping( $dbh ) )
+    $class = ref($class) ? ref($class) : $class;
+    
+    my @dsn = $class->__dsn();
+    my $key = $class->dbi_context( @dsn );
+    if( my $context = $contexts{$key} )
     {
-      return $dbh;
+      if( $context->{dbh} && eval {$context->{dbh}->ping; 1;} )
+      {
+        return $context->{dbh};
+      }
+      else
+      {
+        $context->{dbh} = DBI->connect( @dsn );
+        return $context->{dbh};
+      }# end if()
     }
     else
     {
-      $dbh = $context->{dbh} = DBI->connect_cached( $class->dbi_dsn_full );
-    }# end unless()
+      $contexts{$key} = {
+        dbh => DBI->connect_cached( @dsn )
+      };
+      return $contexts{$key}->{dbh};
+    }# end if()
   };
-}# end set_db()
+}# end _mk_closure()
 
 
 sub dbi_context
 {
-  my ($class, @dsn) = @_;
+  my ($class, @info) = @_;
   
-  return md5_hex(
-    join "|", ( $$, $ENV{HTTP_HOST} || "", $ENV{DOCUMENT_ROOT} || "", @dsn )
-  );
+  my @parts = ( );
+  foreach( @info )
+  {
+    if( ref($_) eq 'HASH' )
+    {
+      my $h = $_;
+      push @parts, map {"$_=$h->{$_}"} sort keys %$h;
+    }
+    else
+    {
+      push @parts, $_;
+    }# end if()
+  }# end foreach()
+  
+  return md5_hex(join ", ", @parts);
 }# end dbi_context()
 
 

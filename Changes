@@ -1,0 +1,10 @@
+
+2010-05-19    v0.003
+  - Fixed a failing test that still referred to Ima::DBI::Lite.
+
+2010-05-19    v0.002
+  - Initial release as "Ima::DBI::Contextual"
+
+2010-05-18    v0.001
+  - Initial release as "Ima::DBI::Lite"
+
