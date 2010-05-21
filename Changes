@@ -1,4 +1,7 @@
 
+2010-05-21    v0.006
+  - db_Main was failing because $dbh->ping alone couldn't detect a dead handle.
+
 2010-05-20    v0.005
   - Fixed synopsis in POD.
 

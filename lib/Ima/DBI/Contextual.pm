@@ -7,7 +7,7 @@ use Carp 'confess';
 use DBI;
 use Digest::MD5 'md5_hex';
 
-our $VERSION = '0.005';
+our $VERSION = '0.006';
 
 
 my %contexts = ( );
@@ -49,10 +49,10 @@ sub _mk_closure
     $class = ref($class) ? ref($class) : $class;
     
     my @dsn = $class->__dsn();
-    my $key = $class->dbi_context( @dsn );
+    my $key = $class->_context( @dsn );
     if( my $context = $contexts{$key} )
     {
-      if( $context->{dbh} && eval {$context->{dbh}->ping; 1;} )
+      if( $context->{dbh} && $class->_ping($context->{dbh}) )
       {
         return $context->{dbh};
       }
@@ -73,7 +73,7 @@ sub _mk_closure
 }# end _mk_closure()
 
 
-sub dbi_context
+sub _context
 {
   my ($class, @info) = @_;
   
@@ -92,15 +92,15 @@ sub dbi_context
   }# end foreach()
   
   return md5_hex(join ", ", @parts);
-}# end dbi_context()
+}# end _context()
 
 
-sub dbi_ping
+sub _ping
 {
   my ($class, $dbh) = @_;
   
-  eval { $dbh->ping; 1 }
-}# end dbi_ping()
+  eval { $dbh->ping && $dbh->do("SELECT 1") }
+}# end _ping()
 
 
 sub rollback
