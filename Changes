@@ -1,4 +1,10 @@
 
+2010-05-20    v0.005
+  - Fixed synopsis in POD.
+
+2010-05-20    v0.004
+  - Just a couple tweaks here and there.
+
 2010-05-19    v0.003
   - Fixed a failing test that still referred to Ima::DBI::Lite.
 

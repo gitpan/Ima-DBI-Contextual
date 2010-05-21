@@ -7,7 +7,7 @@ use Carp 'confess';
 use DBI;
 use Digest::MD5 'md5_hex';
 
-our $VERSION = '0.004';
+our $VERSION = '0.005';
 
 
 my %contexts = ( );
@@ -130,7 +130,7 @@ Ima::DBI::Contextual - Liteweight context-aware dbi handle cache and utility met
 
   package Foo;
   
-  use base 'DBIx::Connection::Cached';
+  use base 'Ima::DBI::Contextual';
   
   my @dsn = ( 'DBI:mysql:dbname:hostname', 'username', 'password', {
     RaiseError => 0,
