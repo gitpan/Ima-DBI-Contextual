@@ -7,7 +7,7 @@ use Carp 'confess';
 use DBI;
 use Digest::MD5 'md5_hex';
 
-our $VERSION = '0.006';
+our $VERSION = '1.000';
 
 
 my %contexts = ( );
@@ -58,6 +58,9 @@ sub _mk_closure
       }
       else
       {
+        # Avoid the dreaded "Issuing rollback() due to DESTROY without explicit disconnect()":
+        eval { $context->{dbh}->disconnect() }
+          if $context->{dbh};
         $context->{dbh} = DBI->connect( @dsn );
         return $context->{dbh};
       }# end if()
