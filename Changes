@@ -1,4 +1,7 @@
 
+2011-06-05    v1.001
+  - Deprecated commit and rollback methods.
+
 2011-06-01    v1.000
   - After a year of solid performance, I'm giving Ima::DBI::Contextual a 1.0 version number.
   - Removed warnings that look like this:

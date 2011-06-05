@@ -7,7 +7,7 @@ use Carp 'confess';
 use DBI;
 use Digest::MD5 'md5_hex';
 
-our $VERSION = '1.000';
+our $VERSION = '1.001';
 
 
 my %contexts = ( );
@@ -109,7 +109,7 @@ sub _ping
 sub rollback
 {
   my ($class) = @_;
-  
+  confess 'Deprecated';
   $class->db_Main->rollback;
 }# end dbi_rollback()
 
@@ -117,7 +117,7 @@ sub rollback
 sub commit
 {
   my ($class) = @_;
-  
+  confess 'Deprecated';
   $class->db_Main->commit;
 }# end dbi_commit()
 
@@ -143,6 +143,9 @@ Ima::DBI::Contextual - Liteweight context-aware dbi handle cache and utility met
 Then, elsewhere:
 
   my $dbh = Foo->db_Main;
+  
+  # Use $dbh like you normally would:
+  my $sth = $dbh->prepare( ... );
 
 =head1 DESCRIPTION
 
