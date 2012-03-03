@@ -1,4 +1,9 @@
 
+
+2012-03-03    v1.003
+  - Of course 5 minutes later, I think I see the bug.
+  - *This* one surely will do the trick.
+
 2012-03-02    v1.002
   - After extensive use in forked/threaded environments, some problems began to appear.
   - This release addresses these problems:

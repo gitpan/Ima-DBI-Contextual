@@ -7,7 +7,7 @@ use Carp 'confess';
 use DBI;
 use Digest::MD5 'md5_hex';
 
-our $VERSION = '1.002';
+our $VERSION = '1.003';
 
 my $cache = { };
   
@@ -49,22 +49,38 @@ sub _mk_closure
     my ($class) = @_;
     
     my $key = $class->_context( \@dsn, $attrs );
-    if( my $dbh = $cache->{$key}->{dbh} )
+    if( $process_id == $$ )
     {
-      if( $process_id == $$ && $dbh && $dbh->FETCH('Active') && $dbh->ping )
+      my $dbh = $cache->{$key}->{dbh};
+      if( $dbh && $dbh->FETCH('Active') && $dbh->ping )
       {
         return $dbh;
       }
       else
       {
-        my $new_dbh = $dbh->clone();
-        $dbh->{InactiveDestroy} = 1;
-        $dbh->disconnect();
-        $class->_ping($new_dbh);
-        undef($dbh);
-        $cache->{$key}->{dbh} = $new_dbh;
-        $process_id = $$;
-        return $new_dbh;
+        if( $dbh )
+        {
+          my $new_dbh = $dbh->clone();
+          $dbh->{InactiveDestroy} = 1;
+          undef($dbh);
+          $process_id = $$;
+          
+          # Now - use the clone or reconnect completely?:
+          $dbh = $new_dbh;
+          $new_dbh = ( $dbh && $dbh->FETCH('Active') && $dbh->ping ) ? $dbh : DBI->connect_cached( @dsn, $attrs );
+          
+          $cache->{$key} = {
+            dbh   => $new_dbh
+          };
+        }
+        else
+        {
+          my $new_dbh = DBI->connect_cached( @dsn, $attrs );
+          $cache->{$key} = {
+            dbh   => $new_dbh
+          };
+        }# end if()
+        return $cache->{$key}->{dbh};
       }# end if()
     }
     else
@@ -72,7 +88,7 @@ sub _mk_closure
       $cache->{$key} = {
         dsn   => \@dsn,
         attrs => $attrs,
-        dbh   => DBI->connect( @dsn, $attrs )
+        dbh   => DBI->connect_cached( @dsn, $attrs )
       };
       return $cache->{$key}->{dbh};
     }# end if()
