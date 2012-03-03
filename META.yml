@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Ima::DBI::Contextual
-version:            1.001
+version:            1.002
 abstract:           Liteweight dbi handle cache and utility methods.
 author:
     - John Drago <jdrago_999@yahoo.com>

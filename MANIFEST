@@ -13,4 +13,5 @@ MANIFEST
 META.yml
 t/010-basic/000-setup.t
 t/010-basic/010-compile.t
-t/testdb
+t/010-basic/020-threads.t
+t/999-cleanup/999-db.t

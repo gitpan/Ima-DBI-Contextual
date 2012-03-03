@@ -7,10 +7,9 @@ use Carp 'confess';
 use DBI;
 use Digest::MD5 'md5_hex';
 
-our $VERSION = '1.001';
+our $VERSION = '1.002';
 
-
-my %contexts = ( );
+my $cache = { };
   
 sub set_db
 {
@@ -21,10 +20,10 @@ sub set_db
   my @dsn             = grep { ! ref($_) } @_;
   my ($attrs)         = grep { ref($_) } @_;
   my $default_attrs   = {
-		RaiseError => 1,
-		AutoCommit => 0,
-		PrintError => 0,
-		Taint      => 1,
+    RaiseError      => 1,
+    AutoCommit      => 0,
+    PrintError      => 0,
+    Taint           => 1,
   };
   map { $attrs->{$_} = $default_attrs->{$_} unless defined($attrs->{$_}) }
     keys %$default_attrs;
@@ -42,35 +41,40 @@ sub set_db
 
 sub _mk_closure
 {
-  my ($pkg, @dsn_with_attrs) = @_;
+  my ($pkg, @dsn) = @_;
+  my $attrs = pop(@dsn);
+  my $process_id = $$;
   
   return sub {
     my ($class) = @_;
-    $class = ref($class) ? ref($class) : $class;
     
-    my @dsn = $class->__dsn();
-    my $key = $class->_context( @dsn );
-    if( my $context = $contexts{$key} )
+    my $key = $class->_context( \@dsn, $attrs );
+    if( my $dbh = $cache->{$key}->{dbh} )
     {
-      if( $context->{dbh} && $class->_ping($context->{dbh}) )
+      if( $process_id == $$ && $dbh && $dbh->FETCH('Active') && $dbh->ping )
       {
-        return $context->{dbh};
+        return $dbh;
       }
       else
       {
-        # Avoid the dreaded "Issuing rollback() due to DESTROY without explicit disconnect()":
-        eval { $context->{dbh}->disconnect() }
-          if $context->{dbh};
-        $context->{dbh} = DBI->connect( @dsn );
-        return $context->{dbh};
+        my $new_dbh = $dbh->clone();
+        $dbh->{InactiveDestroy} = 1;
+        $dbh->disconnect();
+        $class->_ping($new_dbh);
+        undef($dbh);
+        $cache->{$key}->{dbh} = $new_dbh;
+        $process_id = $$;
+        return $new_dbh;
       }# end if()
     }
     else
     {
-      $contexts{$key} = {
-        dbh => DBI->connect_cached( @dsn )
+      $cache->{$key} = {
+        dsn   => \@dsn,
+        attrs => $attrs,
+        dbh   => DBI->connect( @dsn, $attrs )
       };
-      return $contexts{$key}->{dbh};
+      return $cache->{$key}->{dbh};
     }# end if()
   };
 }# end _mk_closure()
@@ -78,15 +82,20 @@ sub _mk_closure
 
 sub _context
 {
-  my ($class, @info) = @_;
+  my ($class, $dsn, $attrs) = @_;
   
-  my @parts = ( );
-  foreach( @info )
+  my @parts = ("pid:$$" );
+  eval { push @parts, threads->tid };
+  foreach( $dsn, $attrs )
   {
     if( ref($_) eq 'HASH' )
     {
       my $h = $_;
       push @parts, map {"$_=$h->{$_}"} sort keys %$h;
+    }
+    elsif( ref($_) eq 'ARRAY' )
+    {
+      push @parts, @$_;
     }
     else
     {
@@ -102,7 +111,8 @@ sub _ping
 {
   my ($class, $dbh) = @_;
   
-  eval { $dbh->ping && $dbh->do("SELECT 1") }
+  local $@;
+  $dbh && $dbh->FETCH('Active') && $dbh->ping && eval { $dbh->do("select 1"); 1 };
 }# end _ping()
 
 
@@ -152,9 +162,11 @@ Then, elsewhere:
 If you like L<Ima::DBI> but need it to be more context-aware (eg: tie dbi connections to
 more than the name and process id) then you need C<Ima::DBI::Contextual>.
 
+=head1 RANT
+
 B<Indications>: For permanent relief of symptoms related to hosting multiple mod_perl
 web applications on one server, where each application uses a different database
-but they all refer to the database handle via C<<Class->db_Main>>.  Such symptoms 
+but they all refer to the database handle via C<< Class->db_Main >>.  Such symptoms 
 may include:
 
 =over 4

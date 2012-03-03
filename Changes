@@ -1,4 +1,12 @@
 
+2012-03-02    v1.002
+  - After extensive use in forked/threaded environments, some problems began to appear.
+  - This release addresses these problems:
+    "DBD driver has not implemented the AutoCommit attribute"
+    "DBD::mysql::db do failed: MySQL server has gone away"
+  - Major shout-out to Perrin for solving most of this several years ago.
+    Perrin++
+
 2011-06-05    v1.001
   - Deprecated commit and rollback methods.
 
