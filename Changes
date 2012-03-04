@@ -1,4 +1,7 @@
 
+2012-03-04    v1.005
+  - Increased DBI required version to 1.614 for AutoInactiveDestroy attribute.
+
 2012-03-04    v1.004
   - A problem with forked children was discovered, which prompted further investigation.
     After many solid hours of furious hacking, I wonder how this ever worked.

@@ -11,7 +11,7 @@ all_from 'lib/Ima/DBI/Contextual.pm';
 test_requires 'Test::More'  => '0';
 test_requires 'DBD::SQLite' => '0';
 
-requires      'DBI'         => '0';
+requires      'DBI'         => '1.614';
 requires      'Carp'        => '0';
 requires      'Digest::MD5' => '0';
 

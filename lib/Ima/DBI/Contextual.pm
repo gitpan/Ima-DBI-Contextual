@@ -8,7 +8,7 @@ use DBI;
 use Digest::MD5 'md5_hex';
 use Time::HiRes 'usleep';
 
-our $VERSION = '1.004';
+our $VERSION = '1.005';
 
 my $cache = { };
   
@@ -21,10 +21,10 @@ sub set_db
   my @dsn             = grep { ! ref($_) } @_;
   my ($attrs)         = grep { ref($_) } @_;
   my $default_attrs   = {
-    RaiseError      => 1,
-    AutoCommit      => 0,
-    PrintError      => 0,
-    Taint           => 1,
+    RaiseError          => 1,
+    AutoCommit          => 0,
+    PrintError          => 0,
+    Taint               => 1,
     AutoInactiveDestroy => 1,
   };
   map { $attrs->{$_} = $default_attrs->{$_} unless defined($attrs->{$_}) }
