@@ -1,4 +1,14 @@
 
+2012-03-04    v1.004
+  - A problem with forked children was discovered, which prompted further investigation.
+    After many solid hours of furious hacking, I wonder how this ever worked.
+    (Don't we all have moments like that?)
+  - Performance with threads.pm, forks.pm, and regular perl fork()s *should*
+    now be quite solid.
+  - Recommended upgrade includes Class::DBI::Lite as a partially-related issue
+    was discovered and fixed there as part of this coding session.
+  - If this release does turn out to be stable, the amount of work that went into
+    this release will warrant a full version bump.
 
 2012-03-03    v1.003
   - Of course 5 minutes later, I think I see the bug.

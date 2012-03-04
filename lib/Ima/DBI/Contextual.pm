@@ -6,8 +6,9 @@ use warnings 'all';
 use Carp 'confess';
 use DBI;
 use Digest::MD5 'md5_hex';
+use Time::HiRes 'usleep';
 
-our $VERSION = '1.003';
+our $VERSION = '1.004';
 
 my $cache = { };
   
@@ -24,6 +25,7 @@ sub set_db
     AutoCommit      => 0,
     PrintError      => 0,
     Taint           => 1,
+    AutoInactiveDestroy => 1,
   };
   map { $attrs->{$_} = $default_attrs->{$_} unless defined($attrs->{$_}) }
     keys %$default_attrs;
@@ -32,76 +34,71 @@ sub set_db
 
   no strict 'refs';
   no warnings 'redefine';
-  *{"$pkg\::__dsn"} = sub { @dsn_with_attrs };
-  *{"$pkg\::db_$name"} = $pkg->_mk_closure( @dsn_with_attrs );
+  *{"$pkg\::db_$name"} = $pkg->_mk_closure( $name, \@dsn, $attrs );
   return;
-
 }# end set_db()
 
 
 sub _mk_closure
 {
-  my ($pkg, @dsn) = @_;
-  my $attrs = pop(@dsn);
-  my $process_id = $$;
+  my ($pkg, $name, $dsn, $attrs) = @_;
   
   return sub {
     my ($class) = @_;
     
-    my $key = $class->_context( \@dsn, $attrs );
-    if( $process_id == $$ )
+    my @dsn = @$dsn;
+    
+    $attrs->{pid} = $$;
+    my $key = $class->_context( $name, \@dsn, $attrs );
+    my $dbh;
+    if( $dbh = $cache->{$key}->{dbh} )
     {
-      my $dbh = $cache->{$key}->{dbh};
-      if( $dbh && $dbh->FETCH('Active') && $dbh->ping )
+      if( $class->_ping($dbh) )
       {
-        return $dbh;
+        # dbh belongs to this process and it's good:
+        # YAY:
       }
       else
       {
-        if( $dbh )
+        # dbh has gone stale.  reconnect:
+        my $child_attrs = { %$attrs };
+        my $clone = $dbh->clone($child_attrs);
+        $dbh->{InactiveDestroy} = 1;
+        undef($dbh);
+        
+        # Now - make sure that the clone worked:
+        if( $class->_ping( $clone ) )
         {
-          my $new_dbh = $dbh->clone();
-          $dbh->{InactiveDestroy} = 1;
-          undef($dbh);
-          $process_id = $$;
-          
-          # Now - use the clone or reconnect completely?:
-          $dbh = $new_dbh;
-          $new_dbh = ( $dbh && $dbh->FETCH('Active') && $dbh->ping ) ? $dbh : DBI->connect_cached( @dsn, $attrs );
-          
-          $cache->{$key} = {
-            dbh   => $new_dbh
-          };
+          # This is a good clone - use it:
+          $dbh = $cache->{$key}->{dbh} = $clone;
         }
         else
         {
-          my $new_dbh = DBI->connect_cached( @dsn, $attrs );
-          $cache->{$key} = {
-            dbh   => $new_dbh
-          };
+          # The clone was no good - reconnect:
+          $dbh = $cache->{$key}->{dbh} = DBI->connect_cached(@dsn, $attrs);
         }# end if()
-        return $cache->{$key}->{dbh};
       }# end if()
     }
     else
     {
-      $cache->{$key} = {
-        dsn   => \@dsn,
-        attrs => $attrs,
-        dbh   => DBI->connect_cached( @dsn, $attrs )
-      };
-      return $cache->{$key}->{dbh};
+      # We have not connected yet - engage:
+      $dbh = $cache->{$key}->{dbh} = DBI->connect_cached(@dsn, $attrs);
     }# end if()
+    
+    # Finally:
+    return $dbh;
   };
 }# end _mk_closure()
 
 
 sub _context
 {
-  my ($class, $dsn, $attrs) = @_;
+  my ($class, $name, $dsn, $attrs) = @_;
   
-  my @parts = ("pid:$$" );
-  eval { push @parts, threads->tid };
+  my @parts = ($name );
+  $attrs->{child_pid} = $$;
+  eval { push @parts, threads->tid }
+    if $INC{'threads.pm'};
   foreach( $dsn, $attrs )
   {
     if( ref($_) eq 'HASH' )
@@ -127,8 +124,21 @@ sub _ping
 {
   my ($class, $dbh) = @_;
   
-  local $@;
-  $dbh && $dbh->FETCH('Active') && $dbh->ping && eval { $dbh->do("select 1"); 1 };
+  # Forgive the "If Slalom" - putting each condition on a separate line gives us
+  # better error messages were one of them to fail:
+  if( $dbh )
+  {
+    if( $dbh->FETCH('Active') )
+    {
+      if( $dbh->ping )
+      {
+        return $dbh;
+      }# end if()
+    }# end if()
+  }# end if()
+  
+  
+  return;
 }# end _ping()
 
 

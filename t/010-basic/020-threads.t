@@ -84,7 +84,6 @@ sub test_forking_then_transaction
   my $succeeds = threads->create({context => 'list'}, sub {
     my $dbh = My::DBI->db_Main;
     local $dbh->{AutoCommit};
-    return ($random_number);
     my $return_value = eval {
       my $sth = My::DBI->db_Main->prepare("select ?");
       $sth->execute( $random_number );
@@ -100,7 +99,7 @@ sub test_forking_then_transaction
     }
     else
     {
-      $dbh->db_Main->commit();
+      $dbh->commit();
       return ($return_value);
     }# end if()
   });
@@ -125,7 +124,7 @@ sub test_forking_then_transaction
     }
     else
     {
-      $dbh->db_Main->commit();
+      $dbh->commit();
       return ($return_value);
     }# end if()
   });
