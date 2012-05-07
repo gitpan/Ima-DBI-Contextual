@@ -8,7 +8,7 @@ use DBI;
 use Digest::MD5 'md5_hex';
 use Time::HiRes 'usleep';
 
-our $VERSION = '1.005';
+our $VERSION = '1.006';
 
 my $cache = { };
   
@@ -164,6 +164,10 @@ sub commit
 =head1 NAME
 
 Ima::DBI::Contextual - Liteweight context-aware dbi handle cache and utility methods.
+
+=head1 DEPRECATED
+
+This module has been deprecated.  Do not use.
 
 =head1 SYNOPSIS
 

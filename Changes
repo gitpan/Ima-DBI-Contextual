@@ -1,4 +1,7 @@
 
+2012-05-07    v1.006
+  - DEPRECATED.
+
 2012-03-04    v1.005
   - Increased DBI required version to 1.614 for AutoInactiveDestroy attribute.
 
